@@ -49,15 +49,8 @@ interface LeaderboardEntry {
   tx_id?: string // new
 }
 
-const BACKEND_URL =
-  typeof process !== "undefined" && process.env.REACT_APP_BACKEND_URL
-    ? process.env.REACT_APP_BACKEND_URL
-    : "http://localhost:7200"
-
-    const FRONTEND_URL =
-    typeof process !== "undefined" && process.env.REACT_APP_FRONTEND_URL
-      ? process.env.REACT_APP_FRONTEND_URL
-      : "http://localhost:5173"
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:7200";
+const FRONTEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5173";
 
 export function Leaderboard() {
   // Filter for only enabled base milestones
