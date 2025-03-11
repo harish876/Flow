@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom"
 
 // Layout & Loader
 import { Layout } from "../components/Layout"
-import { Loader } from "../components/Loader"
+import { Loader } from "../components/Loader" // Updated loader import
 
 // shadcn/ui components
 import {
@@ -26,7 +26,6 @@ import {
   SelectValue,
 } from "../components/ui/select"
 import { Input } from "../components/ui/input"
-import { ScrollArea } from "../components/ui/scroll-area"
 import { Tooltip, TooltipTrigger, TooltipContent } from "../components/ui/tooltip"
 import {
   Tabs,
@@ -34,7 +33,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from "../components/ui/tabs"
-
+import { ScrollArea } from "../components/ui/scroll-area" // If you're still using it, though not shown
 // Redux
 import { useSelector } from "react-redux"
 import { RootState } from "../app/store"
@@ -46,7 +45,7 @@ import { MILESTONES } from "../config/milestones"
 import { Github, FilePlus, Play } from "lucide-react"
 
 // --------------------- Config ---------------------
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:7200";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:7200"
 
 // ====================== HELPER FUNCTIONS ======================
 function trackSubmission() {
@@ -112,7 +111,7 @@ export function Home() {
 
   // Loader, progress, submissions
   const [isUploading, setIsUploading] = useState(false)
-  const [progress, setProgress] = useState(0)
+  const [progress, setProgress] = useState(0) // if you want to show progress
   const [showLoader, setShowLoader] = useState(false)
   const [submissions, setSubmissions] = useState<Set<string>>(new Set())
 
@@ -141,7 +140,6 @@ export function Home() {
     const formData = new FormData()
     formData.append("milestone", milestone1)
     formData.append("extended", extended1 ? "true" : "false")
-    formData.append("extended", extended2 ? "true" : "false")
     formData.append("github_repo", repoUrl)
     formData.append("ai", aiMode ? "true" : "false")
     if (timeout) formData.append("timeout", timeout.toString())
@@ -176,14 +174,13 @@ export function Home() {
     const formData = new FormData()
     formData.append("file", file)
     formData.append("milestone", milestone2)
-    formData.append("extended", extended2 ? "true" : "")
+    formData.append("extended", extended2 ? "true" : "false")
     formData.append("ai", aiMode ? "true" : "false")
     if (timeout) formData.append("timeout", timeout.toString())
 
     try {
       const response = await axios.post(`${BACKEND_URL}/results`, formData, {
         onUploadProgress: (p) => {
-          // If you truly want no progress bar, you can skip this logic
           if (p.total) {
             const pc = Math.round((p.loaded * 100) / p.total)
             setProgress(pc)
@@ -268,7 +265,9 @@ export function Home() {
 
   return (
     <Layout>
-      {showLoader && <Loader show text="Evaluating..." />}
+      {/* Show the updated Loader */}
+      <Loader show={showLoader} text="Evaluating..." />
+
       <div className="flex flex-col gap-6">
         <div className="flex flex-col items-stretch gap-6 md:flex-row">
           {/* Card #1: GitHub */}
@@ -425,17 +424,19 @@ export function Home() {
           </form>
         </div>
 
-        {/* REMOVED the file-upload progress bar; 
-            if you want no progress bar, do not render anything for progress */}
-        {/* 
-          if you want to show the spinner only, we rely on showLoader above 
-          which triggers <Loader show text="Evaluating..." />
-        */}
+        {/* We removed the old progress bar UI. 
+            The Loader with fixed overlay is used instead. */}
 
-        <Tabs value={selectedYear} onValueChange={setSelectedYear} className="w-full mt-6">
+        <Tabs
+          value={selectedYear}
+          onValueChange={setSelectedYear}
+          className="w-full mt-6"
+        >
           <Card className="bg-neutral-900 text-neutral-100 border border-neutral-700 rounded shadow w-full">
             <CardHeader className="flex items-center justify-between w-full">
-              <CardTitle className="text-lg text-white">Evaluation Graph</CardTitle>
+              <CardTitle className="text-lg text-white">
+                Evaluation Graph
+              </CardTitle>
               <TabsList className="bg-neutral-800 border border-neutral-700 text-sm rounded">
                 <TabsTrigger
                   value="2024"
