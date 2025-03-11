@@ -3,12 +3,11 @@ name: Deploy Vite React App to GitHub Pages
 on:
   push:
     branches:
-      - main
-
-  workflow_dispatch:
+      - master  # Ensure we use 'master' since it's your branch
+  workflow_dispatch:  # Allow manual trigger from GitHub Actions UI
 
 permissions:
-  contents: write
+  contents: write  # Required to push to gh-pages branch
 
 jobs:
   build-and-deploy:
@@ -21,13 +20,21 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 18  # Ensure compatibility with Vite
 
       - name: Install dependencies
         run: npm install
 
+      - name: Set up environment variables
+        run: |
+          echo "VITE_BACKEND_URL=https://lstore-backend.resilientdb.com" >> $GITHUB_ENV
+          echo "VITE_FRONTEND_URL=https://lstore.resilientdb.com" >> $GITHUB_ENV
+
       - name: Build Vite project
         run: npm run build
+        env:
+          VITE_BACKEND_URL: ${{ env.VITE_BACKEND_URL }}
+          VITE_FRONTEND_URL: ${{ env.VITE_FRONTEND_URL }}
 
       - name: Create CNAME file
         run: echo "lstore.resilientdb.com" > ./dist/CNAME
@@ -35,7 +42,7 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          branch: gh-pages
-          folder: dist
+          branch: gh-pages  # Deploy to GitHub Pages branch
+          folder: dist      # Ensure we deploy from the built 'dist' folder
           clean: true
           commit-message: "Deploy React Vite app to GitHub Pages"
