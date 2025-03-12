@@ -161,11 +161,11 @@ export function Leaderboard() {
           <table className="min-w-full text-sm border border-neutral-700">
             <thead className="bg-neutral-800 text-neutral-300">
               <tr>
-                <th className="p-2 text-left border-b border-neutral-700">Rank</th>
-                <th className="p-2 text-left border-b border-neutral-700">Submission Name</th>
-                <th className="p-2 text-left border-b border-neutral-700">Test Cases Passed</th>
-                <th className="p-2 text-left border-b border-neutral-700">Total Time</th>
-                <th className="p-2 text-left border-b border-neutral-700">Actions</th>
+                <th className="p-2 text-left border-b border-neutral-700 align-middle">Rank</th>
+                <th className="p-2 text-left border-b border-neutral-700 align-middle">Submission Name</th>
+                <th className="p-2 text-left border-b border-neutral-700 align-middle">Test Cases Passed</th>
+                <th className="p-2 text-left border-b border-neutral-700 align-middle">Total Time</th>
+                <th className="p-2 text-center border-b border-neutral-700 align-middle">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -173,8 +173,8 @@ export function Leaderboard() {
                 const rank = startIndex + index + 1
                 return (
                   <tr key={`${entry.name}-${index}`} className="hover:bg-neutral-800">
-                    <td className="p-2 border-b border-neutral-700">{rank}</td>
-                    <td className="p-2 border-b border-neutral-700">
+                    <td className="p-2 border-b border-neutral-700 align-middle">{rank}</td>
+                    <td className="p-2 border-b border-neutral-700 align-middle">
                       <Badge
                         variant="secondary"
                         className="bg-violet-600 text-white select-none"
@@ -182,36 +182,38 @@ export function Leaderboard() {
                         {entry.name}
                       </Badge>
                     </td>
-                    <td className="p-2 border-b border-neutral-700">
+                    <td className="p-2 border-b border-neutral-700 align-middle">
                       {entry.count}/{entry.total}
                     </td>
-                    <td className="p-2 border-b border-neutral-700">
+                    <td className="p-2 border-b border-neutral-700 align-middle">
                       {entry.total_time} s
                     </td>
-                    <td className="p-2 border-b border-neutral-700 flex gap-4 items-center">
-                      {/* QR Code button */}
-                      {entry.tx_id && (
-                        <button
-                          onClick={() => openQrCode(entry.tx_id)}
-                          className="hover:text-violet-500 transition-colors cursor-pointer"
-                          title="Show QR code"
-                        >
-                          <QrCode className="inline-block h-5 w-5" />
-                        </button>
-                      )}
+                    <td className="p-2 border-b border-neutral-700 align-middle">
+                      <div className="flex justify-center items-center gap-4">
+                        {/* QR Code button */}
+                        {entry.tx_id && (
+                          <button
+                            onClick={() => openQrCode(entry.tx_id)}
+                            className="hover:text-violet-500 transition-colors cursor-pointer"
+                            title="Show QR code"
+                          >
+                            <QrCode className="inline-block h-5 w-5" />
+                          </button>
+                        )}
 
-                      {/* Eye icon => open /results/<tx_id> in a NEW TAB */}
-                      {entry.tx_id && (
-                        <a
-                          href={`/results/${entry.tx_id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-violet-500 transition-colors cursor-pointer"
-                          title="View results in new tab"
-                        >
-                          <Eye className="inline-block h-5 w-5" />
-                        </a>
-                      )}
+                        {/* Eye icon => open /results/<tx_id> in a NEW TAB */}
+                        {entry.tx_id && (
+                          <a
+                            href={`/results/${entry.tx_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-violet-500 transition-colors cursor-pointer"
+                            title="View results in new tab"
+                          >
+                            <Eye className="inline-block h-5 w-5" />
+                          </a>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )
@@ -219,7 +221,7 @@ export function Leaderboard() {
 
               {pageData.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={5} className="text-center p-4">
+                  <td colSpan={5} className="text-center p-4 align-middle">
                     No data found.
                   </td>
                 </tr>
