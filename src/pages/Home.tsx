@@ -333,7 +333,7 @@ export function Home() {
               </CardFooter>
               {!extended1 && (
                 <div className="border-t border-neutral-700 p-3 text-sm text-gray-400">
-                  This is a sample test.
+                  This is a sample/sanity test. It is not a comprehensive set of test cases for the final evaluation.
                 </div>
               )}
             </Card>
@@ -417,7 +417,7 @@ export function Home() {
               </CardFooter>
               {!extended2 && (
                 <div className="border-t border-neutral-700 p-3 text-sm text-gray-400">
-                  This is a sample test.
+                  This is a sample/sanity test. It is not a comprehensive set of test cases for the final evaluation.
                 </div>
               )}
             </Card>
