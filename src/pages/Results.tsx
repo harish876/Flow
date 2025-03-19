@@ -28,7 +28,7 @@ import {
 } from "lucide-react"
 import { Card, CardContent } from "../components/ui/card"
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:7200";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:7200"
 
 function renderTestIcon(passed: boolean) {
   return passed ? (
@@ -242,7 +242,7 @@ export function Results() {
             setResults(topLevel)
           }
         } else {
-          // If no transactionId, we might do a POST with milestone=... 
+          // If no transactionId, we might do a POST with milestone=...
           const milestone = new URLSearchParams(window.location.search).get("milestone")
           const timeout = new URLSearchParams(window.location.search).get("timeout")
           response = await axios.post(`${BACKEND_URL}/results`, { milestone, timeout })
@@ -311,13 +311,16 @@ export function Results() {
       }))
     : []
 
-    const rawContributors = commit_stats?.contributors || []
-    const totalCommits = rawContributors.reduce((acc: number, c: any) => acc + (c.commits || 0), 0)
-    const contributors = rawContributors.map((c: any) => ({
-        name: c.name,
-        // normalized [0..1]
-        level: totalCommits > 0 ? c.commits / totalCommits : 0,
-    }))
+  const rawContributors = commit_stats?.contributors || []
+  const totalCommits = rawContributors.reduce(
+    (acc: number, c: any) => acc + (c.commits || 0),
+    0
+  )
+  const contributors = rawContributors.map((c: any) => ({
+    name: c.name,
+    // normalized [0..1]
+    level: totalCommits > 0 ? c.commits / totalCommits : 0,
+  }))
 
   const allPassed = testCasesPassed === testCasesTotal
   const testBadgeClass = allPassed ? "bg-green-600" : "bg-red-600"
@@ -351,11 +354,11 @@ export function Results() {
                 {testCasesPassed}/{testCasesTotal} Tests
               </Badge>
             </div>
+
             <div className="text-center mb-4">
-              <p className="text-sm text-neutral-300">
-                Share or Scan this QR code:
-              </p>
+              <p className="text-sm text-neutral-300">Share or Scan this QR code:</p>
             </div>
+
             <div className="flex justify-center mb-4">
               <QRCode
                 value={shareUrl || "Invalid URL"}
@@ -364,8 +367,10 @@ export function Results() {
                 size={130}
               />
             </div>
+
+            {/* Responsive container for share link input */}
             <div
-              className="mx-auto relative w-[16rem] cursor-pointer select-none"
+              className="relative mx-auto w-full max-w-xs sm:max-w-sm md:max-w-md cursor-pointer select-none"
               onClick={handleShareFieldClick}
             >
               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
@@ -374,7 +379,7 @@ export function Results() {
               <Input
                 readOnly
                 value={shareUrl || ""}
-                className="pl-8 bg-neutral-800 border border-neutral-700 text-sm text-white pointer-events-none"
+                className="pl-8 bg-neutral-800 border border-neutral-700 text-sm text-white pointer-events-none w-full"
               />
             </div>
           </CardContent>
@@ -415,12 +420,14 @@ export function Results() {
                   >
                     <AccordionItem value={`test-${idx}`}>
                       {/* Overriding default rotation => hide last-child (arrow), force no transform */}
-                      <AccordionTrigger className="
-                        flex items-center gap-2 text-sm px-3 py-2 
-                        [svg:last-child]:hidden
-                        data-[state=open]:[&>svg]:!rotate-0 
-                        data-[state=open]:[&>svg]:!transform-none
-                      ">
+                      <AccordionTrigger
+                        className="
+                          flex items-center gap-2 text-sm px-3 py-2 
+                          [svg:last-child]:hidden
+                          data-[state=open]:[&>svg]:!rotate-0 
+                          data-[state=open]:[&>svg]:!transform-none
+                        "
+                      >
                         {renderTestIcon(tc.passed)}
                         <span className="font-semibold">{tc.name}</span>
                       </AccordionTrigger>
@@ -444,7 +451,9 @@ export function Results() {
             {/* Git Stats if we have commit contributors */}
             {contributors.length > 0 && (
               <div className="bg-neutral-800 border border-neutral-700 rounded p-4 w-full max-w-md shadow-sm mx-auto">
-                <h2 className="text-base font-semibold text-white mb-4">Git Stats</h2>
+                <h2 className="text-base font-semibold text-white mb-4">
+                  Git Stats
+                </h2>
                 <div className="flex justify-center">
                   <GitStatsChart contributors={contributors} />
                 </div>
