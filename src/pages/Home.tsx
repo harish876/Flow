@@ -1,12 +1,12 @@
 "use client"
 
-import React, { useState, useRef, FormEvent, useEffect } from "react"
+import React, { useState, useRef, useEffect, FormEvent } from "react"
 import axios from "axios"
 import { useNavigate } from "react-router-dom"
 
 // Layout & Loader
 import { Layout } from "../components/Layout"
-import { Loader } from "../components/Loader" // Updated loader import
+import { Loader } from "../components/Loader"
 
 // shadcn/ui components
 import {
@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
-  CardFooter,
+  CardFooter
 } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Switch } from "../components/ui/switch"
@@ -23,28 +23,34 @@ import {
   SelectTrigger,
   SelectContent,
   SelectItem,
-  SelectValue,
+  SelectValue
 } from "../components/ui/select"
 import { Input } from "../components/ui/input"
-import { Tooltip, TooltipTrigger, TooltipContent } from "../components/ui/tooltip"
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent
+} from "../components/ui/tooltip"
 import {
   Tabs,
   TabsList,
   TabsTrigger,
-  TabsContent,
+  TabsContent
 } from "../components/ui/tabs"
-import { ScrollArea } from "../components/ui/scroll-area" // If you're still using it, though not shown
+import { ScrollArea } from "../components/ui/scroll-area" // If you still use it
+
 // Redux
 import { useSelector } from "react-redux"
 import { RootState } from "../app/store"
 
-// Milestones config
-import { MILESTONES } from "../config/milestones"
-
 // Icons
 import { Github, FilePlus, Play } from "lucide-react"
 
-// --------------------- Config ---------------------
+// --------------------- Common Config URL ---------------------
+const CONFIG_URL =
+  "https://raw.githubusercontent.com/ResilientApp/l-store-config/refs/heads/main/milestones.json"
+
+// We'll still reference the same BACKEND_URL from your .env
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:7200"
 
 // ====================== HELPER FUNCTIONS ======================
@@ -83,38 +89,68 @@ function generateYearDates(year: number) {
   return columns
 }
 
-function milestoneAllowsExtended(msId: string) {
-  const found = MILESTONES.find((m) => m.id === msId)
+function milestoneAllowsExtended(msId: string, milestones: any[]) {
+  const found = milestones.find((m: any) => m.id === msId)
   return found?.extendedEnabled ?? false
 }
 
 // ====================== HOME COMPONENT ======================
 export function Home() {
-  // Redux store
+  // 1) Load Milestone Config from GitHub
+  const [milestones, setMilestones] = useState<any[]>([])
+  const [loadingConfig, setLoadingConfig] = useState(true)
+
+  useEffect(() => {
+    fetch(CONFIG_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load milestones.json")
+        return res.json()
+      })
+      .then((data) => {
+        if (!data.milestones) throw new Error("Missing 'milestones' field")
+        setMilestones(data.milestones)
+        setLoadingConfig(false)
+      })
+      .catch((err) => {
+        console.error("Error fetching milestone config:", err)
+        setLoadingConfig(false)
+      })
+  }, [])
+
+  // 2) Filter out only the enabled milestones once loaded
+  const enabledMilestones = milestones.filter((m) => m.enabled)
+
+  // 3) Redux-based toggles for AI and Timeout
   const aiMode = useSelector((state: RootState) => state.settings.aiMode)
   const timeout = useSelector((state: RootState) => state.settings.timeout)
 
-  const navigate = useNavigate()
-  const enabledMilestones = MILESTONES.filter((m) => m.enabled)
+  useEffect(() => {
+    console.log("AI Mode changed to:", aiMode)
+    console.log("Timeout changed to:", timeout, "minutes")
+  }, [aiMode, timeout])
 
-  // Card #1: GitHub
-  const [milestone1, setMilestone1] = useState(enabledMilestones[0]?.id || "")
+  // 4) React Router navigate
+  const navigate = useNavigate()
+
+  // 5) States for Card #1 (GitHub)
+  const [milestone1, setMilestone1] = useState("")
   const [extended1, setExtended1] = useState(false)
   const [repoUrl, setRepoUrl] = useState("")
 
-  // Card #2: File Upload
-  const [milestone2, setMilestone2] = useState(enabledMilestones[0]?.id || "")
+  // 6) States for Card #2 (File Upload)
+  const [milestone2, setMilestone2] = useState("")
   const [extended2, setExtended2] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [fileName, setFileName] = useState("")
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  // Loader, progress, submissions
+  // 7) Loader & Submissions states
   const [isUploading, setIsUploading] = useState(false)
-  const [progress, setProgress] = useState(0) // if you want to show progress
+  const [progress, setProgress] = useState(0)
   const [showLoader, setShowLoader] = useState(false)
   const [submissions, setSubmissions] = useState<Set<string>>(new Set())
 
+  // Load prior submissions from localStorage
   useEffect(() => {
     const existing = localStorage.getItem("lstore_submissions")
     if (existing) {
@@ -123,13 +159,24 @@ export function Home() {
     }
   }, [])
 
-  // Just logging changes from Redux
-  useEffect(() => {
-    console.log("AI Mode changed to:", aiMode)
-    console.log("Timeout changed to:", timeout, "minutes")
-  }, [aiMode, timeout])
+  function reloadSubmissions() {
+    const existing = localStorage.getItem("lstore_submissions")
+    if (existing) {
+      const arr: string[] = JSON.parse(existing)
+      setSubmissions(new Set(arr))
+    }
+  }
 
-  // Evaluate Card 1: GitHub
+  // 8) Initialize milestone1/milestone2 defaults once config is loaded
+  //    (only if not set yet)
+  useEffect(() => {
+    if (enabledMilestones.length > 0) {
+      setMilestone1((prev) => (prev ? prev : enabledMilestones[0].id))
+      setMilestone2((prev) => (prev ? prev : enabledMilestones[0].id))
+    }
+  }, [enabledMilestones])
+
+  // 9) Evaluate Card #1 (GitHub)
   async function onEvaluateCard1(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!repoUrl) {
@@ -160,7 +207,7 @@ export function Home() {
     }
   }
 
-  // Evaluate Card 2: File Upload
+  // 10) Evaluate Card #2 (File Upload)
   async function onEvaluateCard2(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!file) {
@@ -185,7 +232,7 @@ export function Home() {
             const pc = Math.round((p.loaded * 100) / p.total)
             setProgress(pc)
           }
-        },
+        }
       })
       const data = response.data
       console.log("Evaluation response:", data)
@@ -203,15 +250,7 @@ export function Home() {
     }
   }
 
-  function reloadSubmissions() {
-    const existing = localStorage.getItem("lstore_submissions")
-    if (existing) {
-      const arr: string[] = JSON.parse(existing)
-      setSubmissions(new Set(arr))
-    }
-  }
-
-  // Contribution graph year
+  // 11) Contribution Graph
   const [selectedYear, setSelectedYear] = useState("2025")
 
   function isSubmissionDay(date: Date | null) {
@@ -263,213 +302,220 @@ export function Home() {
     )
   }
 
+  // ====================== RETURN ======================
   return (
     <Layout>
-      {/* Show the updated Loader */}
+      {/* 1) Show loader if something is in progress */}
       <Loader show={showLoader} text="Evaluating..." />
 
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col items-stretch gap-6 md:flex-row">
-          {/* Card #1: GitHub */}
-          <form onSubmit={onEvaluateCard1} className="flex-1">
-            <Card className="bg-neutral-900 text-neutral-100 border border-neutral-700 rounded shadow flex flex-col h-full">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg text-white">
-                  <Github className="h-5 w-5 text-neutral-400" />
-                  Provide GitHub Repository URL
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1">
-                <p className="text-sm text-neutral-400 mb-3">
-                  Enter your GitHub repo URL (optional).
-                </p>
-                <Input
-                  type="url"
-                  placeholder="https://github.com/username/repo"
-                  value={repoUrl}
-                  onChange={(e) => setRepoUrl(e.target.value)}
-                  className="bg-neutral-800 text-white"
-                />
-              </CardContent>
-              <CardFooter className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={extended1}
-                      onCheckedChange={(val) => setExtended1(Boolean(val))}
-                      disabled={!milestoneAllowsExtended(milestone1)}
-                      className="h-6 w-11 shrink-0 rounded-full border-2 border-transparent relative data-[state=unchecked]:bg-gray-600 data-[state=checked]:bg-violet-600 transition-colors duration-200 ease-in-out focus:outline-none"
+      {/* 2) If still loading config, show a placeholder */}
+      {loadingConfig ? (
+        <div className="p-4 text-center">Loading milestones config...</div>
+      ) : (
+        <>
+          {/* 3) Main content once config is loaded */}
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col items-stretch gap-6 md:flex-row">
+              {/* Card #1: GitHub */}
+              <form onSubmit={onEvaluateCard1} className="flex-1">
+                <Card className="bg-neutral-900 text-neutral-100 border border-neutral-700 rounded shadow flex flex-col h-full">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg text-white">
+                      <Github className="h-5 w-5 text-neutral-400" />
+                      Provide GitHub Repository URL
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-1">
+                    <p className="text-sm text-neutral-400 mb-3">
+                      Enter your GitHub repo URL (optional).
+                    </p>
+                    <Input
+                      type="url"
+                      placeholder="https://github.com/username/repo"
+                      value={repoUrl}
+                      onChange={(e) => setRepoUrl(e.target.value)}
+                      className="bg-neutral-800 text-white"
                     />
-                    <span className="text-sm">Extended</span>
-                  </div>
-                  <Select
-                    value={milestone1}
-                    onValueChange={(val) => {
-                      setMilestone1(val)
-                      if (!milestoneAllowsExtended(val)) {
-                        setExtended1(false)
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-36 bg-neutral-800 border border-neutral-700 text-neutral-100 text-sm">
-                      <SelectValue placeholder="Milestone" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-neutral-900 text-neutral-100 border border-neutral-700 text-sm">
-                      {enabledMilestones.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  type="submit"
-                  className="bg-violet-600 text-white hover:bg-violet-700 flex items-center gap-2 text-sm"
-                >
-                  <Play className="h-4 w-4" />
-                  Evaluate
-                </Button>
-              </CardFooter>
-              {!extended1 && (
-                <div className="border-t border-neutral-700 p-3 text-sm text-gray-400">
-                  This is a sample/sanity test. It is not a comprehensive set of test cases for the final evaluation.
-                </div>
-              )}
-            </Card>
-          </form>
+                  </CardContent>
+                  <CardFooter className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={extended1}
+                          onCheckedChange={(val) => setExtended1(Boolean(val))}
+                          disabled={!milestoneAllowsExtended(milestone1, milestones)}
+                          className="h-6 w-11 shrink-0 rounded-full border-2 border-transparent relative data-[state=unchecked]:bg-gray-600 data-[state=checked]:bg-violet-600 transition-colors duration-200 ease-in-out focus:outline-none"
+                        />
+                        <span className="text-sm">Extended</span>
+                      </div>
+                      <Select
+                        value={milestone1}
+                        onValueChange={(val) => {
+                          setMilestone1(val)
+                          if (!milestoneAllowsExtended(val, milestones)) {
+                            setExtended1(false)
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-36 bg-neutral-800 border border-neutral-700 text-neutral-100 text-sm">
+                          <SelectValue placeholder="Milestone" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-neutral-900 text-neutral-100 border border-neutral-700 text-sm">
+                          {enabledMilestones.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>
+                              {m.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="submit"
+                      className="bg-violet-600 text-white hover:bg-violet-700 flex items-center gap-2 text-sm"
+                    >
+                      <Play className="h-4 w-4" />
+                      Evaluate
+                    </Button>
+                  </CardFooter>
+                  {!extended1 && (
+                    <div className="border-t border-neutral-700 p-3 text-sm text-gray-400">
+                      This is a sample/sanity test. It is not a comprehensive set of test cases for the final evaluation.
+                    </div>
+                  )}
+                </Card>
+              </form>
 
-          {/* Card #2: File Upload */}
-          <form onSubmit={onEvaluateCard2} className="flex-1">
-            <Card className="bg-neutral-900 text-neutral-100 border border-neutral-700 rounded shadow flex flex-col h-full">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg text-white">
-                  <FilePlus className="h-5 w-5 text-neutral-400" />
-                  Upload your .zip
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1">
-                <div
-                  className="mt-2 flex flex-col items-center justify-center border-2 border-dashed border-neutral-700 rounded-lg p-6 cursor-pointer hover:bg-neutral-800"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <FilePlus className="mb-2 h-10 w-10 text-neutral-500" />
-                  <p className="text-center text-sm text-neutral-400">
-                    {fileName
-                      ? `File uploaded: ${fileName}`
-                      : "Drag your .zip here or click to browse"}
+              {/* Card #2: File Upload */}
+              <form onSubmit={onEvaluateCard2} className="flex-1">
+                <Card className="bg-neutral-900 text-neutral-100 border border-neutral-700 rounded shadow flex flex-col h-full">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg text-white">
+                      <FilePlus className="h-5 w-5 text-neutral-400" />
+                      Upload your .zip
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-1">
+                    <div
+                      className="mt-2 flex flex-col items-center justify-center border-2 border-dashed border-neutral-700 rounded-lg p-6 cursor-pointer hover:bg-neutral-800"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <FilePlus className="mb-2 h-10 w-10 text-neutral-500" />
+                      <p className="text-center text-sm text-neutral-400">
+                        {fileName
+                          ? `File uploaded: ${fileName}`
+                          : "Drag your .zip here or click to browse"}
+                      </p>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        name="file"
+                        accept=".zip"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files.length > 0) {
+                            setFile(e.target.files[0])
+                            setFileName(e.target.files[0].name)
+                          }
+                        }}
+                      />
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={extended2}
+                          onCheckedChange={(val) => setExtended2(Boolean(val))}
+                          disabled={!milestoneAllowsExtended(milestone2, milestones)}
+                          className="h-6 w-11 shrink-0 rounded-full border-2 border-transparent relative data-[state=unchecked]:bg-gray-600 data-[state=checked]:bg-violet-600 transition-colors duration-200 ease-in-out focus:outline-none"
+                        />
+                        <span className="text-sm">Extended</span>
+                      </div>
+                      <Select
+                        value={milestone2}
+                        onValueChange={(val) => {
+                          setMilestone2(val)
+                          if (!milestoneAllowsExtended(val, milestones)) {
+                            setExtended2(false)
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-36 bg-neutral-800 border border-neutral-700 text-neutral-100 text-sm">
+                          <SelectValue placeholder="Milestone" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-neutral-900 text-neutral-100 border border-neutral-700 text-sm">
+                          {enabledMilestones.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>
+                              {m.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={isUploading}
+                      className="bg-violet-600 text-white hover:bg-violet-700 flex items-center gap-2 text-sm"
+                    >
+                      <Play className="h-4 w-4" />
+                      Evaluate
+                    </Button>
+                  </CardFooter>
+                  {!extended2 && (
+                    <div className="border-t border-neutral-700 p-3 text-sm text-gray-400">
+                      This is a sample/sanity test. It is not a comprehensive set of test cases for the final evaluation.
+                    </div>
+                  )}
+                </Card>
+              </form>
+            </div>
+
+            {/* Contribution Graph */}
+            <Tabs
+              value={selectedYear}
+              onValueChange={setSelectedYear}
+              className="w-full mt-6"
+            >
+              <Card className="bg-neutral-900 text-neutral-100 border border-neutral-700 rounded shadow w-full">
+                <CardHeader className="flex items-center justify-between w-full">
+                  <CardTitle className="text-lg text-white">
+                    Evaluation Graph
+                  </CardTitle>
+                  <TabsList className="bg-neutral-800 border border-neutral-700 text-sm rounded">
+                    <TabsTrigger
+                      value="2024"
+                      className="data-[state=active]:bg-violet-600 data-[state=active]:text-white"
+                    >
+                      2024
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="2025"
+                      className="data-[state=active]:bg-violet-600 data-[state=active]:text-white"
+                    >
+                      2025
+                    </TabsTrigger>
+                  </TabsList>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-neutral-400 mb-4 text-center">
+                    Visual representation of your daily evaluations.
                   </p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    name="file"
-                    accept=".zip"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        setFile(e.target.files[0])
-                        setFileName(e.target.files[0].name)
-                      }
-                    }}
-                  />
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={extended2}
-                      onCheckedChange={(val) => setExtended2(Boolean(val))}
-                      disabled={!milestoneAllowsExtended(milestone2)}
-                      className="h-6 w-11 shrink-0 rounded-full border-2 border-transparent relative data-[state=unchecked]:bg-gray-600 data-[state=checked]:bg-violet-600 transition-colors duration-200 ease-in-out focus:outline-none"
-                    />
-                    <span className="text-sm">Extended</span>
-                  </div>
-                  <Select
-                    value={milestone2}
-                    onValueChange={(val) => {
-                      setMilestone2(val)
-                      if (!milestoneAllowsExtended(val)) {
-                        setExtended2(false)
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-36 bg-neutral-800 border border-neutral-700 text-neutral-100 text-sm">
-                      <SelectValue placeholder="Milestone" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-neutral-900 text-neutral-100 border border-neutral-700 text-sm">
-                      {enabledMilestones.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  type="submit"
-                  disabled={isUploading}
-                  className="bg-violet-600 text-white hover:bg-violet-700 flex items-center gap-2 text-sm"
-                >
-                  <Play className="h-4 w-4" />
-                  Evaluate
-                </Button>
-              </CardFooter>
-              {!extended2 && (
-                <div className="border-t border-neutral-700 p-3 text-sm text-gray-400">
-                  This is a sample/sanity test. It is not a comprehensive set of test cases for the final evaluation.
-                </div>
-              )}
-            </Card>
-          </form>
-        </div>
-
-        {/* We removed the old progress bar UI. 
-            The Loader with fixed overlay is used instead. */}
-
-        <Tabs
-          value={selectedYear}
-          onValueChange={setSelectedYear}
-          className="w-full mt-6"
-        >
-          <Card className="bg-neutral-900 text-neutral-100 border border-neutral-700 rounded shadow w-full">
-            <CardHeader className="flex items-center justify-between w-full">
-              <CardTitle className="text-lg text-white">
-                Evaluation Graph
-              </CardTitle>
-              <TabsList className="bg-neutral-800 border border-neutral-700 text-sm rounded">
-                <TabsTrigger
-                  value="2024"
-                  className="data-[state=active]:bg-violet-600 data-[state=active]:text-white"
-                >
-                  2024
-                </TabsTrigger>
-                <TabsTrigger
-                  value="2025"
-                  className="data-[state=active]:bg-violet-600 data-[state=active]:text-white"
-                >
-                  2025
-                </TabsTrigger>
-              </TabsList>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-neutral-400 mb-4 text-center">
-                Visual representation of your daily evaluations.
-              </p>
-              <TabsContent value="2024">
-                <div className="overflow-x-auto flex justify-center">
-                  {renderContributionGraph("2024")}
-                </div>
-              </TabsContent>
-              <TabsContent value="2025">
-                <div className="overflow-x-auto flex justify-center">
-                  {renderContributionGraph("2025")}
-                </div>
-              </TabsContent>
-            </CardContent>
-          </Card>
-        </Tabs>
-      </div>
+                  <TabsContent value="2024">
+                    <div className="overflow-x-auto flex justify-center">
+                      {renderContributionGraph("2024")}
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="2025">
+                    <div className="overflow-x-auto flex justify-center">
+                      {renderContributionGraph("2025")}
+                    </div>
+                  </TabsContent>
+                </CardContent>
+              </Card>
+            </Tabs>
+          </div>
+        </>
+      )}
     </Layout>
   )
 }

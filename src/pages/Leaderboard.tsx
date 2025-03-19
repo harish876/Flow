@@ -38,49 +38,74 @@ import { QrCode, Eye } from "lucide-react"
 // For generating QR codes
 import QRCode from "react-qr-code"
 
-// Our central milestone config
-import { MILESTONES } from "../config/milestones"
+// --------------------- Common Config URL ---------------------
+const CONFIG_URL =
+  "https://raw.githubusercontent.com/ResilientApp/l-store-config/refs/heads/main/milestones.json"
+
+// Env-based constants
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:7200"
+const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || "http://localhost:5173"
 
 interface LeaderboardEntry {
   name: string
   count: number
   total: number
   total_time: number
-  tx_id?: string // new
+  tx_id?: string
 }
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:7200";
-const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || "http://localhost:5173";
-
 export function Leaderboard() {
-  // Filter for only enabled base milestones
-  const enabledMilestones = MILESTONES.filter((m) => m.enabled)
+  // 1) Load milestone config from GitHub
+  const [milestones, setMilestones] = useState<any[]>([])
+  const [loadingConfig, setLoadingConfig] = useState(true)
 
-  // Flatten them
-  const milestoneDropdownItems = enabledMilestones.flatMap((m) => {
+  useEffect(() => {
+    fetch(CONFIG_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load milestones.json")
+        return res.json()
+      })
+      .then((data) => {
+        if (!data.milestones) throw new Error("Missing 'milestones' field")
+        setMilestones(data.milestones)
+        setLoadingConfig(false)
+      })
+      .catch((err) => {
+        console.error("Error fetching milestone config:", err)
+        setLoadingConfig(false)
+      })
+  }, [])
+
+  // 2) Build the milestone dropdown items from the loaded config
+  const enabledMilestones = milestones.filter((m) => m.enabled)
+
+  // Flatten them: each "base" milestone plus an optional "extended" version
+  const milestoneDropdownItems = enabledMilestones.flatMap((m: any) => {
     const items = [
       {
-        value: m.id,
-        label: m.label,
+        value: m.id, // e.g. "milestone1"
+        label: m.label, // e.g. "Milestone 1"
       },
     ]
     if (m.extendedEnabled) {
       items.push({
-        value: `${m.id}_extended`,
+        value: `${m.id}_extended`, // e.g. "milestone1_extended"
         label: `${m.label} Extended`,
       })
     }
     return items
   })
 
-  // default milestone
-  const [milestone, setMilestone] = useState(
+  // 3) State for selected milestone
+  const [milestone, setMilestone] = useState<string>(
     milestoneDropdownItems[0]?.value || ""
   )
+
+  // 4) Leaderboard data
   const [data, setData] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(false)
 
-  // Pagination
+  // 5) Pagination
   const [currentPage, setCurrentPage] = useState(1)
   const rowsPerPage = 5
   const totalPages = Math.ceil(data.length / rowsPerPage)
@@ -88,10 +113,18 @@ export function Leaderboard() {
   const endIndex = startIndex + rowsPerPage
   const pageData = data.slice(startIndex, endIndex)
 
-  // QR code dialog
+  // 6) QR code dialog
   const [qrOpen, setQrOpen] = useState(false)
   const [qrTarget, setQrTarget] = useState("")
 
+  // 7) Once the config is loaded, set a default milestone if none selected
+  useEffect(() => {
+    if (milestoneDropdownItems.length > 0 && !milestone) {
+      setMilestone(milestoneDropdownItems[0].value)
+    }
+  }, [milestoneDropdownItems, milestone])
+
+  // 8) Fetch leaderboard whenever the milestone changes
   useEffect(() => {
     if (milestone) {
       fetchAndUpdateLeaderboard(milestone)
@@ -101,9 +134,7 @@ export function Leaderboard() {
   async function fetchAndUpdateLeaderboard(ms: string) {
     try {
       setLoading(true)
-      const response = await axios.get(
-        `${BACKEND_URL}/leaderboard?milestone=${ms}`
-      )
+      const response = await axios.get(`${BACKEND_URL}/leaderboard?milestone=${ms}`)
       const serverData = response.data
       if (Array.isArray(serverData)) {
         setData(serverData)
@@ -125,13 +156,22 @@ export function Leaderboard() {
     if (currentPage > 1) setCurrentPage(currentPage - 1)
   }
 
-  // Open the QR code dialog
+  // 9) Open the QR code dialog
   function openQrCode(txId: string | undefined) {
     if (!txId) return
     // The full URL for results
     const resultsUrl = `${FRONTEND_URL}/results/${txId}`
     setQrTarget(resultsUrl)
     setQrOpen(true)
+  }
+
+  // If still loading config, show a simple message/loader
+  if (loadingConfig) {
+    return (
+      <Layout>
+        <div className="p-4 text-center">Loading milestones config...</div>
+      </Layout>
+    )
   }
 
   return (
@@ -161,19 +201,34 @@ export function Leaderboard() {
           <table className="min-w-full text-sm border border-neutral-700">
             <thead className="bg-neutral-800 text-neutral-300">
               <tr>
-                <th className="p-2 text-left border-b border-neutral-700 align-middle">Rank</th>
-                <th className="p-2 text-left border-b border-neutral-700 align-middle">Submission Name</th>
-                <th className="p-2 text-left border-b border-neutral-700 align-middle">Test Cases Passed</th>
-                <th className="p-2 text-left border-b border-neutral-700 align-middle">Total Time</th>
-                <th className="p-2 text-center border-b border-neutral-700 align-middle">Actions</th>
+                <th className="p-2 text-left border-b border-neutral-700 align-middle">
+                  Rank
+                </th>
+                <th className="p-2 text-left border-b border-neutral-700 align-middle">
+                  Submission Name
+                </th>
+                <th className="p-2 text-left border-b border-neutral-700 align-middle">
+                  Test Cases Passed
+                </th>
+                <th className="p-2 text-left border-b border-neutral-700 align-middle">
+                  Total Time
+                </th>
+                <th className="p-2 text-center border-b border-neutral-700 align-middle">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {pageData.map((entry, index) => {
                 const rank = startIndex + index + 1
                 return (
-                  <tr key={`${entry.name}-${index}`} className="hover:bg-neutral-800">
-                    <td className="p-2 border-b border-neutral-700 align-middle">{rank}</td>
+                  <tr
+                    key={`${entry.name}-${index}`}
+                    className="hover:bg-neutral-800"
+                  >
+                    <td className="p-2 border-b border-neutral-700 align-middle">
+                      {rank}
+                    </td>
                     <td className="p-2 border-b border-neutral-700 align-middle">
                       <Badge
                         variant="secondary"
@@ -261,13 +316,11 @@ export function Leaderboard() {
           <DialogHeader className="flex items-center justify-between">
             <DialogTitle className="text-white">Share Results</DialogTitle>
             <DialogClose asChild>
-              {/* Possibly an X button from your UI library */}
+              {/* Possibly an X button or another close trigger */}
             </DialogClose>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center gap-4 mt-4">
-            <p className="text-sm text-neutral-400">
-              Scan this QR code to view:
-            </p>
+            <p className="text-sm text-neutral-400">Scan this QR code to view:</p>
             <div className="bg-neutral-800 p-4">
               <QRCode
                 value={qrTarget || ""}
