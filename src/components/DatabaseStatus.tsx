@@ -17,6 +17,12 @@ interface DatabaseStatusProps {
   type: "resilientdb" | "mongodb";
 }
 
+interface MongoConfig {
+  database: string;
+  collection: string;
+  uri: string;
+}
+
 export default function DatabaseStatus({ name, type }: DatabaseStatusProps) {
   const [status, setStatus] = useState<
     "connected" | "disconnected" | "checking"
@@ -26,42 +32,29 @@ export default function DatabaseStatus({ name, type }: DatabaseStatusProps) {
   const [details, setDetails] = useState<Record<string, string>>({});
   const [showConfig, setShowConfig] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Get MongoDB config from localStorage or use defaults
-  const getMongoConfig = () => {
-    if (typeof window === "undefined")
-      return { host: "", database: "", collection: "" };
-
-    try {
-      const saved = localStorage.getItem("mongodbConfig");
-      return saved
-        ? JSON.parse(saved)
-        : {
-            host: "mongo.example.com",
-            database: "documents_db",
-            collection: "sync_data",
-          };
-    } catch (e) {
-      return {
-        host: "mongo.example.com",
-        database: "documents_db",
-        collection: "sync_data",
-      };
-    }
-  };
+  const [mongoConfig, setMongoConfig] = useState<MongoConfig>(() => {
+    // Load initial config from localStorage
+    const savedConfig = localStorage.getItem("mongoConfig");
+    return savedConfig
+      ? JSON.parse(savedConfig)
+      : {
+          database: "",
+          collection: "",
+          uri: "",
+        };
+  });
+  const [configVersion, setConfigVersion] = useState(0);
 
   useEffect(() => {
     checkConnection();
-  }, []);
+  }, [configVersion]);
 
   const checkConnection = async () => {
     setIsRefreshing(true);
     setStatus("checking");
 
     try {
-      // In a real app, this would be a server action or API call
-      // Pass MongoDB config if this is MongoDB
-      const config = type === "mongodb" ? getMongoConfig() : undefined;
+      const config = type === "mongodb" ? mongoConfig : undefined;
       const result = await checkDatabaseConnection(type, config);
       setStatus(result.connected ? "connected" : "disconnected");
       setDetails(result.details);
@@ -75,9 +68,12 @@ export default function DatabaseStatus({ name, type }: DatabaseStatusProps) {
     }
   };
 
-  const handleConfigSaved = () => {
+  const handleConfigSaved = async (newConfig: MongoConfig) => {
+    // Save to localStorage
+    localStorage.setItem("mongoConfig", JSON.stringify(newConfig));
+    setMongoConfig(newConfig);
     setShowConfig(false);
-    checkConnection();
+    setConfigVersion((prev) => prev + 1);
   };
 
   if (isLoading) {
@@ -129,6 +125,7 @@ export default function DatabaseStatus({ name, type }: DatabaseStatusProps) {
           <MongoDbConfig
             onSave={handleConfigSaved}
             onCancel={() => setShowConfig(false)}
+            initialConfig={mongoConfig}
           />
         ) : (
           <div className="space-y-4">

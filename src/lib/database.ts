@@ -1,9 +1,11 @@
 // This is a mock implementation - in a real app, you would connect to actual databases
 
+import { encryptMongoUri } from "./encryption";
+
 interface MongoDbConfig {
-    host: string
-    database: string
-    collection: string
+    database: string;
+    collection: string;
+    uri: string;
 }
 
 export async function checkDatabaseConnection(type: string, config?: MongoDbConfig) {
@@ -37,18 +39,42 @@ export async function checkDatabaseConnection(type: string, config?: MongoDbConf
     } else if (type === "mongodb") {
         // Use provided config or defaults
         const mongoConfig = config || {
-            host: "mongo.example.com",
-            database: "documents_db",
-            collection: "sync_data",
+            uri: "",
+            database: "",
+            collection: "",
         }
+        try {
+            const { encryptedUri, iv } = await encryptMongoUri(mongoConfig.uri);
+            const mongoUrl = import.meta.env.VITE_MONGODB_PROXY_URL
+            const response = await fetch(mongoUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    mongoDbName: config?.database,
+                    mongoCollectionName: config?.collection,
+                    mongoUri: config?.uri,
+                    uri: encryptedUri,
+                    iv,
+                })
+            })
 
-        details = {
-            "Host": mongoConfig.host,
-            "Database": mongoConfig.database,
-            "Collection": mongoConfig.collection,
-            "Version": "MongoDB 6.0"
+            if (response.ok) {
+                const data = await response.json()
+                connected = true
+                details = {
+                    "Database": mongoConfig.database,
+                    "Collection": mongoConfig.collection,
+                    "Collection Exists": data?.collectionExists ? "Yes" : "No",
+                }
+            } else {
+                connected = false
+            }
+        } catch (error) {
+            console.error("Failed to connect to MongoDB:", error)
+            connected = false
         }
-        connected = true // Mock success for MongoDB
     }
 
     return { connected, details }

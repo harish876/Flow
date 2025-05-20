@@ -1,7 +1,8 @@
 // src/components/Header.tsx
 
-import React from "react"
-import layersIcon from "../assets/layers.png"
+import React from "react";
+import { Wrench } from "lucide-react";
+import flowIcon from "../assets/flow.svg";
 
 /**
  * A simple IDE-like header with a black background,
@@ -13,16 +14,17 @@ export function Header() {
       {/* Left side: just the logo */}
       <div className="flex items-center gap-2">
         <img
-          src={layersIcon}
-          alt="L-Store Logo"
-          className="h-6 w-6"
+          src={flowIcon}
+          alt="ResilientDB Flow Logo"
+          className="h-10 w-10 text-white"
         />
       </div>
 
-      {/* Right side: Beta badge */}
-      <div className="bg-violet-800 text-xs px-2 py-1 rounded-full text-neutral-200 uppercase tracking-wide">
-        Beta Release
+      {/* Right side: Construction badge */}
+      <div className="flex items-center gap-2 bg-violet-800 text-xs px-3 py-1.5 rounded-full text-neutral-200 uppercase tracking-wide">
+        <Wrench className="h-4 w-4" />
+        Under Construction
       </div>
     </header>
-  )
+  );
 }

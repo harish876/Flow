@@ -4,6 +4,7 @@ import DatabaseStatusPlaceholder from "../components/DatabaseStatusPlaceholder";
 // Layout & Loader
 import { Layout } from "../components/Layout";
 import DatabaseStatus from "../components/DatabaseStatus";
+import DockerLogs from "../components/DockerLogs";
 
 // ====================== HELPER FUNCTIONS ======================
 
@@ -24,7 +25,11 @@ export function Home() {
             </Suspense>
           </div>
 
-          {/* Contribution Graph */}
+          {/* Docker Logs */}
+          <DockerLogs
+            containerName="Sync Pipeline"
+            imageName="resilientdb/resilientdb:latest"
+          />
         </div>
       </>
     </Layout>

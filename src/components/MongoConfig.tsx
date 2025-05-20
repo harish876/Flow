@@ -1,56 +1,37 @@
-"use client";
-
 import type React from "react";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import MongoConfigSkeleton from "./MongoConfigSkeleton";
 import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react";
 
 interface MongoDbConfigProps {
-  onSave: () => void;
+  onSave: (config: MongoDbConfig) => void;
   onCancel: () => void;
+  initialConfig?: MongoDbConfig;
 }
 
 interface MongoDbConfig {
-  host: string;
   database: string;
   collection: string;
+  uri: string;
 }
 
 export default function MongoDbConfig({
   onSave,
   onCancel,
+  initialConfig,
 }: MongoDbConfigProps) {
-  const [config, setConfig] = useState<MongoDbConfig>({
-    host: "",
-    database: "",
-    collection: "",
-  });
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Load saved config from localStorage
-    try {
-      const savedConfig = localStorage.getItem("mongodbConfig");
-      if (savedConfig) {
-        setConfig(JSON.parse(savedConfig));
-      } else {
-        // Default values if nothing is saved
-        setConfig({
-          host: "mongo.example.com",
-          database: "documents_db",
-          collection: "sync_data",
-        });
-      }
-    } catch (error) {
-      console.error("Failed to load MongoDB config:", error);
-    } finally {
-      setIsLoading(false);
+  const [config, setConfig] = useState<MongoDbConfig>(
+    initialConfig || {
+      database: "",
+      collection: "",
+      uri: "",
     }
-  }, []);
+  );
+  const [showUri, setShowUri] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -59,39 +40,44 @@ export default function MongoDbConfig({
 
   const handleSave = () => {
     // Validate inputs
-    if (!config.host || !config.database || !config.collection) {
+    if (!config.database || !config.collection || !config.uri) {
       toast.error("All fields are required");
       return;
     }
 
-    // Save to localStorage
-    try {
-      localStorage.setItem("mongodbConfig", JSON.stringify(config));
-      toast.success("MongoDB connection settings have been updated");
-      onSave();
-    } catch (error) {
-      toast.error("Failed to save configuration");
-    }
+    onSave(config);
   };
-
-  if (isLoading) {
-    return <MongoConfigSkeleton />;
-  }
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="host" className="text-white">
-          Host
+        <Label htmlFor="uri" className="text-white">
+          Connection URI
         </Label>
-        <Input
-          id="host"
-          name="host"
-          value={config.host}
-          onChange={handleChange}
-          placeholder="e.g., mongodb.example.com:27017"
-          className="bg-neutral-800 border-neutral-700 focus-visible:ring-neutral-500 text-white"
-        />
+        <div className="relative">
+          <Input
+            id="uri"
+            name="uri"
+            type={showUri ? "text" : "password"}
+            value={config.uri}
+            onChange={handleChange}
+            placeholder="mongodb://username:password@host:port/database"
+            className="bg-neutral-800 border-neutral-700 focus-visible:ring-neutral-500 text-white pr-10"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-0 top-0 h-full px-3 hover:bg-neutral-700"
+            onClick={() => setShowUri(!showUri)}
+          >
+            {showUri ? (
+              <EyeOff className="h-4 w-4 text-white" />
+            ) : (
+              <Eye className="h-4 w-4 text-white" />
+            )}
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-2">
